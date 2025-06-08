@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flanelinha - Sistema Completo</title>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .header h1 {
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+        }
+        
+        .btn-success {
+            background: #10b981;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th, .table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .status-active {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .status-inactive {
+            color: #ef4444;
+        }
+        
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .stats-card {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stats-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .stats-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .nav-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .nav-tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚗 Flanelinha - Sistema de Gestão</h1>
+            <p>Modernizando o trabalho dos guardadores de carros</p>
+        </div>
+        
+        <!-- Main Content -->
+        <div id="app">
+            <!-- Login Section -->
+            <div id="loginSection" class="card">
+                <h2>Acesso ao Sistema</h2>
+                <div class="nav-tabs">
+                    <button class="nav-tab active" onclick="switchTab('admin')">Admin</button>
+                    <button class="nav-tab" onclick="switchTab('association')">Associação</button>
+                    <button class="nav-tab" onclick="switchTab('guard')">Guardador</button>
+                </div>
+                
+                <!-- Admin Login -->
+                <form id="adminLogin" onsubmit="login(event, 'admin')">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" value="admin@flanelinha.com.br" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Entrar como Admin</button>
+                </form>
+                
+                <!-- Association Login -->
+                <form id="associationLogin" class="hidden" onsubmit="login(event, 'association')">
+                    <div class="form-group">
+                        <label>Email da Associação</label>
+                        <input type="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Entrar como Associação</button>
+                </form>
+                
+                <!-- Guard Login -->
+                <form id="guardLogin" class="hidden" onsubmit="login(event, 'guard')">
+                    <div class="form-group">
+                        <label>CPF</label>
+                        <input type="text" name="cpf" placeholder="123.456.789-01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Entrar como Guardador</button>
+                </form>
+                
+                <div class="alert alert-success" style="margin-top: 20px;">
+                    <strong>Credenciais de Teste:</strong><br>
+                    Admin: admin@flanelinha.com.br / admin123<br>
+                    Associação: demo@associacao.com / demo123<br>
+                    Guardador: CPF 123.456.789-01 / 123456
+                </div>
+            </div>
+            
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" class="hidden">
+                <!-- User Info -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h2 id="userName">Bem-vindo!</h2>
+                            <p id="userRole">Carregando...</p>
+                        </div>
+                        <button class="btn btn-danger" onclick="logout()">Sair</button>
+                    </div>
+                </div>
+                
+                <!-- Admin Dashboard -->
+                <div id="adminDashboard" class="hidden">
+                    <div class="grid">
+                        <div class="card stats-card">
+                            <h3>Total de Associações</h3>
+                            <div class="value" id="totalAssociations">0</div>
+                        </div>
+                        <div class="card stats-card">
+                            <h3>Total de Guardadores</h3>
+                            <div class="value" id="totalGuards">0</div>
+                        </div>
+                        <div class="card stats-card">
+                            <h3>Vagas Ativas</h3>
+                            <div class="value" id="activeSpots">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Gerenciar Associações</h3>
+                        <button class="btn btn-success" onclick="showAddAssociation()">+ Nova Associação</button>
+                        <div id="associationsList" style="margin-top: 20px;">
+                            <div class="loading">Carregando associações...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Association Dashboard -->
+                <div id="associationDashboard" class="hidden">
+                    <div class="grid">
+                        <div class="card stats-card">
+                            <h3>Meus Guardadores</h3>
+                            <div class="value" id="myGuards">0</div>
+                        </div>
+                        <div class="card stats-card">
+                            <h3>Vagas Hoje</h3>
+                            <div class="value" id="todaySpots">0</div>
+                        </div>
+                        <div class="card stats-card">
+                            <h3>Comissão Total</h3>
+                            <div class="value" id="totalCommission">R$ 0,00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Meus Guardadores</h3>
+                        <button class="btn btn-success" onclick="showAddGuard()">+ Novo Guardador</button>
+                        <div id="guardsList" style="margin-top: 20px;">
+                            <div class="loading">Carregando guardadores...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Guard Dashboard -->
+                <div id="guardDashboard" class="hidden">
+                    <div class="grid">
+                        <div class="card stats-card">
+                            <h3>Vagas Hoje</h3>
+                            <div class="value" id="myTodaySpots">0</div>
+                        </div>
+                        <div class="card stats-card">
+                            <h3>Ganhos Hoje</h3>
+                            <div class="value" id="todayEarnings">R$ 0,00</div>
+                        </div>
+                        <div class="card stats-card">
+                            <h3>Minha Avaliação</h3>
+                            <div class="value" id="myRating">5.0 ⭐</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Meu QR Code</h3>
+                        <div class="qr-container">
+                            <div id="qrcode"></div>
+                            <p style="margin-top: 20px;">
+                                <strong id="guardNameQR">Carregando...</strong><br>
+                                Imprima este QR Code e use no seu crachá
+                            </p>
+                            <button class="btn" onclick="window.print()">Imprimir QR Code</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIRb8Y7ct6wBxeMQ86foRT1s3E2FC8QVY",
+            authDomain: "flanelinha-ltda.firebaseapp.com",
+            projectId: "flanelinha-ltda",
+            storageBucket: "flanelinha-ltda.firebasestorage.app",
+            messagingSenderId: "396982431821",
+            appId: "1:396982431821:web:9ea195cea51d79b13bac04"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // Global variables
+        let currentUser = null;
+        let userRole = null;
+        let userData = null;
+        
+        // Switch login tabs
+        function switchTab(tab) {
+            // Hide all forms
+            document.getElementById('adminLogin').classList.add('hidden');
+            document.getElementById('associationLogin').classList.add('hidden');
+            document.getElementById('guardLogin').classList.add('hidden');
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            
+            // Show selected form and activate tab
+            if (tab === 'admin') {
+                document.getElementById('adminLogin').classList.remove('hidden');
+            } else if (tab === 'association') {
+                document.getElementById('associationLogin').classList.remove('hidden');
+            } else if (tab === 'guard') {
+                document.getElementById('guardLogin').classList.remove('hidden');
+            }
+            
+            event.target.classList.add('active');
+        }
+        
+        // Login function
+        async function login(event, type) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            try {
+                let email, password;
+                
+                if (type === 'guard') {
+                    // Convert CPF to email for guards
+                    const cpf = formData.get('cpf').replace(/\D/g, '');
+                    email = `${cpf}@flanelinha.com.br`;
+                    password = formData.get('password');
+                } else {
+                    email = formData.get('email');
+                    password = formData.get('password');
+                }
+                
+                await auth.signInWithEmailAndPassword(email, password);
+                
+            } catch (error) {
+                alert('Erro ao fazer login: ' + error.message);
+            }
+        }
+        
+        // Logout
+        function logout() {
+            auth.signOut();
+        }
+        
+        // Auth state observer
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                
+                // Determine user role
+                if (user.email === 'admin@flanelinha.com.br') {
+                    userRole = 'admin';
+                    showDashboard('admin');
+                } else if (user.email.includes('@flanelinha.com.br')) {
+                    userRole = 'guard';
+                    const cpf = user.email.split('@')[0];
+                    const guardDoc = await db.collection('guards').where('cpf', '==', cpf).limit(1).get();
+                    if (!guardDoc.empty) {
+                        userData = { id: guardDoc.docs[0].id, ...guardDoc.docs[0].data() };
+                        showDashboard('guard');
+                    }
+                } else {
+                    userRole = 'association';
+                    const assocDoc = await db.collection('associations').where('email', '==', user.email).limit(1).get();
+                    if (!assocDoc.empty) {
+                        userData = { id: assocDoc.docs[0].id, ...assocDoc.docs[0].data() };
+                        showDashboard('association');
+                    }
+                }
+            } else {
+                // Show login
+                document.getElementById('loginSection').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('hidden');
+            }
+        });
+        
+        // Show dashboard
+        async function showDashboard(role) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            
+            // Hide all dashboards
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('associationDashboard').classList.add('hidden');
+            document.getElementById('guardDashboard').classList.add('hidden');
+            
+            if (role === 'admin') {
+                document.getElementById('userName').textContent = 'Administrador';
+                document.getElementById('userRole').textContent = 'Admin Master';
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                loadAdminData();
+            } else if (role === 'association') {
+                document.getElementById('userName').textContent = userData.responsavel;
+                document.getElementById('userRole').textContent = userData.nome;
+                document.getElementById('associationDashboard').classList.remove('hidden');
+                loadAssociationData();
+            } else if (role === 'guard') {
+                document.getElementById('userName').textContent = userData.name;
+                document.getElementById('userRole').textContent = 'Guardador - ' + userData.area;
+                document.getElementById('guardDashboard').classList.remove('hidden');
+                loadGuardData();
+            }
+        }
+        
+        // Load admin data
+        async function loadAdminData() {
+            try {
+                const [associations, guards, spots] = await Promise.all([
+                    db.collection('associations').get(),
+                    db.collection('guards').get(),
+                    db.collection('spots').where('active', '==', true).get()
+                ]);
+                
+                document.getElementById('totalAssociations').textContent = associations.size;
+                document.getElementById('totalGuards').textContent = guards.size;
+                document.getElementById('activeSpots').textContent = spots.size;
+                
+                // Load associations list
+                let html = '<table class="table"><thead><tr><th>Nome</th><th>Responsável</th><th>Status</th></tr></thead><tbody>';
+                associations.forEach(doc => {
+                    const data = doc.data();
+                    html += `<tr>
+                        <td>${data.nome}</td>
+                        <td>${data.responsavel}</td>
+                        <td class="${data.status === 'active' ? 'status-active' : 'status-inactive'}">
+                            ${data.status === 'active' ? 'Ativo' : 'Inativo'}
+                        </td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('associationsList').innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading admin data:', error);
+            }
+        }
+        
+        // Load association data
+        async function loadAssociationData() {
+            try {
+                const guards = await db.collection('guards').where('associationId', '==', userData.id).get();
+                document.getElementById('myGuards').textContent = guards.size;
+                
+                // Load guards list
+                let html = '<table class="table"><thead><tr><th>Nome</th><th>CPF</th><th>Área</th><th>Avaliação</th></tr></thead><tbody>';
+                guards.forEach(doc => {
+                    const data = doc.data();
+                    html += `<tr>
+                        <td>${data.name}</td>
+                        <td>${data.cpf}</td>
+                        <td>${data.area}</td>
+                        <td>${data.rating || 5.0} ⭐</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('guardsList').innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading association data:', error);
+            }
+        }
+        
+        // Load guard data
+        async function loadGuardData() {
+            document.getElementById('guardNameQR').textContent = userData.name;
+            
+            // Generate QR Code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            const qrText = `https://wa.me/5598970173223?text=Olá!%20Sou%20${encodeURIComponent(userData.name)},%20guardador%20da%20Flanelinha.%20Gostaria%20de%20iniciar%20uma%20vaga.&guardId=${userData.id}`;
+            
+            new QRCode(qrContainer, {
+                text: qrText,
+                width: 256,
+                height: 256,
+                colorDark: "#000000",
+                colorLight: "#ffffff"
+            });
+            
+            // Load today's spots
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const spots = await db.collection('spots')
+                .where('guardId', '==', userData.id)
+                .where('createdAt', '>=', today)
+                .get();
+                
+            document.getElementById('myTodaySpots').textContent = spots.size;
+            document.getElementById('myRating').textContent = `${userData.rating || 5.0} ⭐`;
+        }
+        
+        // Setup initial data (run once)
+        async function setupInitialData() {
+            try {
+                // Check if already setup
+                const admins = await db.collection('users').where('role', '==', 'admin').get();
+                if (!admins.empty) {
+                    console.log('System already setup');
+                    return;
+                }
+                
+                // Create demo association
+                const assocRef = await db.collection('associations').add({
+                    nome: 'Associação Demo Belém',
+                    cnpj: '12345678000190',
+                    email: 'demo@associacao.com',
+                    responsavel: 'João Demo',
+                    whatsapp: '91999999999',
+                    cidade: 'Belém/PA',
+                    status: 'active',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Create demo guard
+                await db.collection('guards').add({
+                    name: 'José Guardador Demo',
+                    cpf: '12345678901',
+                    email: '12345678901@flanelinha.com.br',
+                    phone: '91988888888',
+                    area: 'Centro - Praça da República',
+                    associationId: assocRef.id,
+                    associationName: 'Associação Demo Belém',
+                    status: 'active',
+                    rating: 5.0,
+                    totalSpots: 0,
+                    totalEarnings: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('Initial setup completed!');
+                
+            } catch (error) {
+                console.error('Setup error:', error);
+            }
+        }
+        
+        // Placeholder functions for add forms
+        function showAddAssociation() {
+            alert('Função de adicionar associação será implementada em breve!');
+        }
+        
+        function showAddGuard() {
+            alert('Função de adicionar guardador será implementada em breve!');
+        }
+        
+        // Run setup on first load
+        // setupInitialData();
+    </script>
+</body>
+</html>
