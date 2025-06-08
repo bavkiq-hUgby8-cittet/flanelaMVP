@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flanelinha - Sistema Completo</title>
+    <title>Flanelinha - Sistema Completo com Auto Setup</title>
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -21,7 +21,7 @@
         }
         
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             background: #f5f5f5;
             color: #333;
         }
@@ -56,10 +56,18 @@
             cursor: pointer;
             font-size: 16px;
             margin: 5px;
+            transition: all 0.3s;
         }
         
         .btn:hover {
             background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .btn-secondary {
@@ -137,7 +145,7 @@
         }
         
         .hidden {
-            display: none;
+            display: none !important;
         }
         
         .loading {
@@ -174,11 +182,19 @@
         .alert-success {
             background: #d1fae5;
             color: #065f46;
+            border: 1px solid #a7f3d0;
         }
         
         .alert-error {
             background: #fee2e2;
             color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
         }
         
         .nav-tabs {
@@ -204,6 +220,43 @@
             border-bottom-color: #2563eb;
         }
         
+        /* Setup screen styles */
+        .setup-screen {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .setup-step {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .setup-step.completed {
+            background: #d1fae5;
+        }
+        
+        .setup-step.error {
+            background: #fee2e2;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -211,6 +264,21 @@
             
             .grid {
                 grid-template-columns: 1fr;
+            }
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .qr-container, .qr-container * {
+                visibility: visible;
+            }
+            .qr-container {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
             }
         }
     </style>
@@ -225,8 +293,56 @@
         
         <!-- Main Content -->
         <div id="app">
+            <!-- Setup Section -->
+            <div id="setupSection" class="card setup-screen">
+                <h2>⚙️ Configuração Inicial do Sistema</h2>
+                <p>Detectamos que é a primeira vez que você acessa o sistema. Vamos configurar tudo automaticamente!</p>
+                
+                <div class="setup-step" id="step1">
+                    <h3>1. Criando usuário administrador</h3>
+                    <p id="step1-status">Aguardando...</p>
+                </div>
+                
+                <div class="setup-step" id="step2">
+                    <h3>2. Criando associação de demonstração</h3>
+                    <p id="step2-status">Aguardando...</p>
+                </div>
+                
+                <div class="setup-step" id="step3">
+                    <h3>3. Criando guardador de demonstração</h3>
+                    <p id="step3-status">Aguardando...</p>
+                </div>
+                
+                <button class="btn btn-success" id="startSetupBtn" onclick="startAutoSetup()">
+                    Iniciar Configuração Automática
+                </button>
+                
+                <div id="setupResults" class="hidden" style="margin-top: 20px;">
+                    <div class="alert alert-success">
+                        <h3>✅ Sistema Configurado com Sucesso!</h3>
+                        <p>Credenciais criadas:</p>
+                        <div style="text-align: left; margin-top: 10px;">
+                            <strong>Admin:</strong><br>
+                            Email: admin@flanelinha.com.br<br>
+                            Senha: admin123<br><br>
+                            
+                            <strong>Associação:</strong><br>
+                            Email: demo@associacao.com<br>
+                            Senha: demo123<br><br>
+                            
+                            <strong>Guardador:</strong><br>
+                            CPF: 123.456.789-01<br>
+                            Senha: 123456
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="finishSetup()">
+                        Continuar para o Sistema
+                    </button>
+                </div>
+            </div>
+            
             <!-- Login Section -->
-            <div id="loginSection" class="card">
+            <div id="loginSection" class="card hidden">
                 <h2>Acesso ao Sistema</h2>
                 <div class="nav-tabs">
                     <button class="nav-tab active" onclick="switchTab('admin')">Admin</button>
@@ -273,7 +389,7 @@
                     <button type="submit" class="btn">Entrar como Guardador</button>
                 </form>
                 
-                <div class="alert alert-success" style="margin-top: 20px;">
+                <div class="alert alert-info" style="margin-top: 20px;">
                     <strong>Credenciais de Teste:</strong><br>
                     Admin: admin@flanelinha.com.br / admin123<br>
                     Associação: demo@associacao.com / demo123<br>
@@ -313,7 +429,7 @@
                     
                     <div class="card">
                         <h3>Gerenciar Associações</h3>
-                        <button class="btn btn-success" onclick="showAddAssociation()">+ Nova Associação</button>
+                        <button class="btn btn-success" onclick="alert('Função em desenvolvimento!')">+ Nova Associação</button>
                         <div id="associationsList" style="margin-top: 20px;">
                             <div class="loading">Carregando associações...</div>
                         </div>
@@ -339,7 +455,7 @@
                     
                     <div class="card">
                         <h3>Meus Guardadores</h3>
-                        <button class="btn btn-success" onclick="showAddGuard()">+ Novo Guardador</button>
+                        <button class="btn btn-success" onclick="alert('Função em desenvolvimento!')">+ Novo Guardador</button>
                         <div id="guardsList" style="margin-top: 20px;">
                             <div class="loading">Carregando guardadores...</div>
                         </div>
@@ -371,7 +487,7 @@
                                 <strong id="guardNameQR">Carregando...</strong><br>
                                 Imprima este QR Code e use no seu crachá
                             </p>
-                            <button class="btn" onclick="window.print()">Imprimir QR Code</button>
+                            <button class="btn" onclick="window.print()">🖨️ Imprimir QR Code</button>
                         </div>
                     </div>
                 </div>
@@ -399,6 +515,150 @@
         let currentUser = null;
         let userRole = null;
         let userData = null;
+        let setupComplete = false;
+        
+        // Check if setup is needed on page load
+        window.addEventListener('load', async () => {
+            try {
+                // Check if system is already setup
+                const setupDoc = await db.collection('system').doc('setup').get();
+                if (setupDoc.exists && setupDoc.data().completed) {
+                    setupComplete = true;
+                    finishSetup();
+                } else {
+                    // Show setup screen
+                    document.getElementById('setupSection').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.log('First time setup needed');
+                document.getElementById('setupSection').classList.remove('hidden');
+            }
+        });
+        
+        // Auto Setup Function
+        async function startAutoSetup() {
+            const btn = document.getElementById('startSetupBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Configurando...';
+            
+            try {
+                // Step 1: Create Admin
+                updateSetupStep('step1', 'processing', 'Criando administrador...');
+                
+                try {
+                    await auth.createUserWithEmailAndPassword('admin@flanelinha.com.br', 'admin123');
+                    updateSetupStep('step1', 'completed', '✅ Administrador criado!');
+                } catch (error) {
+                    if (error.code === 'auth/email-already-in-use') {
+                        updateSetupStep('step1', 'completed', '✅ Administrador já existe!');
+                    } else {
+                        throw error;
+                    }
+                }
+                
+                // Step 2: Create Demo Association
+                updateSetupStep('step2', 'processing', 'Criando associação demo...');
+                
+                let assocId;
+                const existingAssoc = await db.collection('associations').where('email', '==', 'demo@associacao.com').get();
+                
+                if (existingAssoc.empty) {
+                    const assocRef = await db.collection('associations').add({
+                        nome: 'Associação Demo Belém',
+                        cnpj: '12345678000190',
+                        email: 'demo@associacao.com',
+                        responsavel: 'João Demo',
+                        whatsapp: '91999999999',
+                        cidade: 'Belém/PA',
+                        status: 'active',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    assocId = assocRef.id;
+                    
+                    try {
+                        await auth.createUserWithEmailAndPassword('demo@associacao.com', 'demo123');
+                    } catch (error) {
+                        if (error.code !== 'auth/email-already-in-use') throw error;
+                    }
+                } else {
+                    assocId = existingAssoc.docs[0].id;
+                }
+                
+                updateSetupStep('step2', 'completed', '✅ Associação demo criada!');
+                
+                // Step 3: Create Demo Guard
+                updateSetupStep('step3', 'processing', 'Criando guardador demo...');
+                
+                const existingGuard = await db.collection('guards').where('cpf', '==', '12345678901').get();
+                
+                if (existingGuard.empty) {
+                    await db.collection('guards').add({
+                        name: 'José Guardador Demo',
+                        cpf: '12345678901',
+                        email: '12345678901@flanelinha.com.br',
+                        phone: '91988888888',
+                        area: 'Centro - Praça da República',
+                        associationId: assocId,
+                        associationName: 'Associação Demo Belém',
+                        status: 'active',
+                        rating: 5.0,
+                        totalSpots: 0,
+                        totalEarnings: 0,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    try {
+                        await auth.createUserWithEmailAndPassword('12345678901@flanelinha.com.br', '123456');
+                    } catch (error) {
+                        if (error.code !== 'auth/email-already-in-use') throw error;
+                    }
+                }
+                
+                updateSetupStep('step3', 'completed', '✅ Guardador demo criado!');
+                
+                // Mark setup as complete
+                await db.collection('system').doc('setup').set({
+                    completed: true,
+                    completedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Show results
+                document.getElementById('setupResults').classList.remove('hidden');
+                btn.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Setup error:', error);
+                alert('Erro durante a configuração: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Tentar Novamente';
+            }
+        }
+        
+        // Update setup step status
+        function updateSetupStep(stepId, status, message) {
+            const step = document.getElementById(stepId);
+            const statusElement = document.getElementById(stepId + '-status');
+            
+            step.classList.remove('completed', 'error');
+            if (status === 'completed') {
+                step.classList.add('completed');
+            } else if (status === 'error') {
+                step.classList.add('error');
+            }
+            
+            if (status === 'processing') {
+                statusElement.innerHTML = '<span class="spinner"></span> ' + message;
+            } else {
+                statusElement.textContent = message;
+            }
+        }
+        
+        // Finish setup and go to login
+        function finishSetup() {
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            setupComplete = true;
+        }
         
         // Switch login tabs
         function switchTab(tab) {
@@ -455,7 +715,7 @@
         
         // Auth state observer
         auth.onAuthStateChanged(async (user) => {
-            if (user) {
+            if (user && setupComplete) {
                 currentUser = user;
                 
                 // Determine user role
@@ -478,7 +738,7 @@
                         showDashboard('association');
                     }
                 }
-            } else {
+            } else if (setupComplete) {
                 // Show login
                 document.getElementById('loginSection').classList.remove('hidden');
                 document.getElementById('dashboardSection').classList.add('hidden');
@@ -601,63 +861,6 @@
             document.getElementById('myTodaySpots').textContent = spots.size;
             document.getElementById('myRating').textContent = `${userData.rating || 5.0} ⭐`;
         }
-        
-        // Setup initial data (run once)
-        async function setupInitialData() {
-            try {
-                // Check if already setup
-                const admins = await db.collection('users').where('role', '==', 'admin').get();
-                if (!admins.empty) {
-                    console.log('System already setup');
-                    return;
-                }
-                
-                // Create demo association
-                const assocRef = await db.collection('associations').add({
-                    nome: 'Associação Demo Belém',
-                    cnpj: '12345678000190',
-                    email: 'demo@associacao.com',
-                    responsavel: 'João Demo',
-                    whatsapp: '91999999999',
-                    cidade: 'Belém/PA',
-                    status: 'active',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                // Create demo guard
-                await db.collection('guards').add({
-                    name: 'José Guardador Demo',
-                    cpf: '12345678901',
-                    email: '12345678901@flanelinha.com.br',
-                    phone: '91988888888',
-                    area: 'Centro - Praça da República',
-                    associationId: assocRef.id,
-                    associationName: 'Associação Demo Belém',
-                    status: 'active',
-                    rating: 5.0,
-                    totalSpots: 0,
-                    totalEarnings: 0,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                console.log('Initial setup completed!');
-                
-            } catch (error) {
-                console.error('Setup error:', error);
-            }
-        }
-        
-        // Placeholder functions for add forms
-        function showAddAssociation() {
-            alert('Função de adicionar associação será implementada em breve!');
-        }
-        
-        function showAddGuard() {
-            alert('Função de adicionar guardador será implementada em breve!');
-        }
-        
-        // Run setup on first load
-        // setupInitialData();
     </script>
 </body>
 </html>
